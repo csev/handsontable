@@ -1,7 +1,8 @@
 import React, { useRef } from 'react';
-import { render, unmountComponentAtNode } from 'react-dom';
+import { render } from 'react-dom';
 import { act } from 'react-dom/test-utils';
 import { HotTable } from '../src/hotTable';
+import { addUnsafePrefixes } from '../src/helpers';
 import { BaseEditorComponent } from '../src/baseEditorComponent';
 
 const SPEC = {
@@ -19,7 +20,6 @@ beforeEach(() => {
 afterEach(() => {
   const container = document.querySelector('#hotContainer');
 
-  unmountComponentAtNode(container);
   container.parentNode.removeChild(container);
   SPEC.container = null;
 });
@@ -42,7 +42,7 @@ export function mountComponent(Component, container = SPEC.container) {
   }
 
   act(() => {
-    render(<React.StrictMode><App/></React.StrictMode>, container);
+    render(<App/>, container);
   });
 
   return hotTableComponent?.current;
@@ -169,7 +169,16 @@ export function simulateMouseEvent(element, type) {
 
 class IndividualPropsWrapper extends React.Component<{ref?: string, id?: string}, {hotSettings?: object}> {
   hotTable: typeof HotTable;
-  state = {};
+
+  constructor(props) {
+    super(props);
+
+    addUnsafePrefixes(this);
+  }
+
+  componentWillMount() {
+    this.setState({});
+  }
 
   private setHotElementRef(component: typeof HotTable): void {
     this.hotTable = component;
@@ -194,10 +203,19 @@ export { IndividualPropsWrapper };
 
 class SingleObjectWrapper extends React.Component<{ref?: string, id?: string}, {hotSettings?: object}> {
   hotTable: typeof HotTable;
-  state = {};
+
+  constructor(props) {
+    super(props);
+
+    addUnsafePrefixes(this);
+  }
 
   private setHotElementRef(component: typeof HotTable): void {
     this.hotTable = component;
+  }
+
+  componentWillMount() {
+    this.setState({});
   }
 
   render(): React.ReactElement {

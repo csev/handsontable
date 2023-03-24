@@ -1,11 +1,11 @@
 import React, { ReactPortal } from 'react';
 import { HotTableProps, HotColumnProps } from './types';
 import {
+  addUnsafePrefixes,
   createEditorPortal,
-  getExtendedEditorElement,
+  getExtendedEditorElement
 } from './helpers';
 import { SettingsMapper } from './settingsMapper';
-import { EditorsPortalManager } from './editorsPortalManager';
 import Handsontable from 'handsontable/base';
 
 class HotColumn extends React.Component<HotColumnProps, {}> {
@@ -13,19 +13,41 @@ class HotColumn extends React.Component<HotColumnProps, {}> {
   columnSettings: Handsontable.ColumnSettings;
 
   /**
-   * Component used to manage the editor portals.
+   * Local editor portal cache.
    *
-   * @type {React.Component}
+   * @private
+   * @type {ReactPortal}
    */
-  private editorsPortalManager: EditorsPortalManager = null;
+  private localEditorPortal: ReactPortal = null;
 
   /**
-   * Set the editors portal manager ref.
+   * HotColumn class constructor.
    *
-   * @param {React.ReactComponent} pmComponent The PortalManager component.
+   * @param {HotColumnProps} props Component props.
+   * @param {*} [context] Component context.
    */
-  private setEditorsPortalManagerRef(pmComponent: EditorsPortalManager): void {
-    this.editorsPortalManager = pmComponent;
+  constructor(props: HotColumnProps, context?: any) {
+    super(props, context);
+
+    addUnsafePrefixes(this);
+  }
+
+  /**
+   * Get the local editor portal cache property.
+   *
+   * @return {ReactPortal} Local editor portal.
+   */
+  getLocalEditorPortal(): ReactPortal {
+    return this.localEditorPortal;
+  }
+
+  /**
+   * Set the local editor portal cache property.
+   *
+   * @param {ReactPortal} portal Local editor portal.
+   */
+  setLocalEditorPortal(portal): void {
+    this.localEditorPortal = portal;
   }
 
   /**
@@ -34,7 +56,7 @@ class HotColumn extends React.Component<HotColumnProps, {}> {
    * @returns {Object}
    */
   getSettingsProps(): HotTableProps {
-    this.internalProps = ['_componentRendererColumns', '_emitColumnSettings', '_columnIndex', '_getChildElementByType', '_getRendererWrapper',
+    this.internalProps = ['__componentRendererColumns', '_emitColumnSettings', '_columnIndex', '_getChildElementByType', '_getRendererWrapper',
       '_getEditorClass', '_getEditorCache', '_getOwnerDocument', 'hot-renderer', 'hot-editor', 'children'];
 
     return Object.keys(this.props)
@@ -61,8 +83,8 @@ class HotColumn extends React.Component<HotColumnProps, {}> {
    * Create the column settings based on the data provided to the `HotColumn` component and it's child components.
    */
   createColumnSettings(): void {
-    const rendererElement = this.props._getChildElementByType(this.props.children, 'hot-renderer');
-    const editorElement = this.getLocalEditorElement();
+    const rendererElement: React.ReactElement = this.props._getChildElementByType(this.props.children, 'hot-renderer');
+    const editorElement: React.ReactElement = this.getLocalEditorElement();
 
     this.columnSettings = SettingsMapper.getSettings(this.getSettingsProps()) as unknown as Handsontable.ColumnSettings;
 
@@ -77,18 +99,17 @@ class HotColumn extends React.Component<HotColumnProps, {}> {
   }
 
   /**
-   * Creates the local editor portal and renders it within the editors portal manager component.
+   * Create the local editor portal and its destination HTML element if needed.
    *
-   * @param {Function} callback Callback to call which is triggered after the editors portal is rendered.
+   * @param {React.ReactNode} [children] Children of the HotTable instance. Defaults to `this.props.children`.
    */
-  renderLocalEditorPortal(callback: () => void): void {
+  createLocalEditorPortal(children = this.props.children): void {
     const editorCache = this.props._getEditorCache();
-    const localEditorElement = getExtendedEditorElement(this.props.children, editorCache, this.props._columnIndex);
-    const editorPortal = createEditorPortal(this.props._getOwnerDocument(), localEditorElement);
+    const localEditorElement: React.ReactElement = getExtendedEditorElement(children, editorCache, this.props._columnIndex);
 
-    this.editorsPortalManager.setState({
-      portals: [editorPortal]
-    }, callback);
+    if (localEditorElement) {
+      this.setLocalEditorPortal(createEditorPortal(this.props._getOwnerDocument(), localEditorElement, editorCache));
+    }
   }
 
   /**
@@ -105,23 +126,33 @@ class HotColumn extends React.Component<HotColumnProps, {}> {
   */
 
   /**
+   * Logic performed before the mounting of the HotColumn component.
+   */
+  componentWillMount(): void {
+    this.createLocalEditorPortal();
+  }
+
+  /**
    * Logic performed after the mounting of the HotColumn component.
    */
   componentDidMount(): void {
-    this.renderLocalEditorPortal(() => {
-      this.createColumnSettings();
-      this.emitColumnSettings();
-    });
+    this.createColumnSettings();
+    this.emitColumnSettings();
+  }
+
+  /**
+   * Logic performed before the updating of the HotColumn component.
+   */
+  componentWillUpdate(nextProps: Readonly<HotColumnProps>, nextState: Readonly<{}>, nextContext: any): void {
+    this.createLocalEditorPortal(nextProps.children);
   }
 
   /**
    * Logic performed after the updating of the HotColumn component.
    */
   componentDidUpdate(): void {
-    this.renderLocalEditorPortal(() => {
-      this.createColumnSettings();
-      this.emitColumnSettings();
-    });
+    this.createColumnSettings();
+    this.emitColumnSettings();
   }
 
   /**
@@ -132,7 +163,7 @@ class HotColumn extends React.Component<HotColumnProps, {}> {
   render(): React.ReactElement {
     return (
       <React.Fragment>
-        <EditorsPortalManager ref={this.setEditorsPortalManagerRef.bind(this)} />
+        {this.getLocalEditorPortal()}
       </React.Fragment>
     )
   }

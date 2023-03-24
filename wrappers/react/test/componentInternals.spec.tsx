@@ -145,9 +145,15 @@ describe('Component lifecyle', () => {
         super(props);
 
         rendererCounters.set(`${this.props.row}-${this.props.col}`, {
+          willMount: 0,
           didMount: 0,
           willUnmount: 0
         });
+      }
+
+      UNSAFE_componentWillMount(): void {
+        const counters = rendererCounters.get(`${this.props.row}-${this.props.col}`);
+        counters.willMount++;
       }
 
       componentDidMount(): void {
@@ -203,6 +209,7 @@ describe('Component lifecyle', () => {
     )).hotInstance;
 
     rendererCounters.forEach((counters) => {
+      expect(counters.willMount).toEqual(1);
       expect(counters.didMount).toEqual(1);
       expect(counters.willUnmount).toEqual(0);
     });
@@ -213,6 +220,7 @@ describe('Component lifecyle', () => {
     await sleep(300);
 
     rendererCounters.forEach((counters) => {
+      expect(counters.willMount).toEqual(1);
       expect(counters.didMount).toEqual(1);
       expect(counters.willUnmount).toEqual(1);
     });
@@ -224,9 +232,15 @@ describe('Component lifecyle', () => {
         super(props);
 
         editorCounters.set(`${this.props.row}-${this.props.col}`, {
+          willMount: 0,
           didMount: 0,
           willUnmount: 0
         });
+      }
+
+      UNSAFE_componentWillMount(): void {
+        const counters = editorCounters.get(`${this.props.row}-${this.props.col}`);
+        counters.willMount++;
       }
 
       componentDidMount(): void {
@@ -275,6 +289,7 @@ describe('Component lifecyle', () => {
     ));
 
     editorCounters.forEach((counters) => {
+      expect(counters.willMount).toEqual(1);
       expect(counters.didMount).toEqual(1);
       expect(counters.willUnmount).toEqual(0);
     });
@@ -286,6 +301,7 @@ describe('Component lifecyle', () => {
     await sleep(100);
 
     editorCounters.forEach((counters) => {
+      expect(counters.willMount).toEqual(1);
       expect(counters.didMount).toEqual(1);
       expect(counters.willUnmount).toEqual(1);
     });
